@@ -10,13 +10,15 @@ class BasicConvClassifier(nn.Module):
         num_classes: int,
         seq_len: int,
         in_channels: int,
-        hid_dim: int = 128
+        hid_dim: int = 128,
+        p_drop: float = 0.1,  # ドロップアウト率を追加
+        weight_decay: float = 0.001
     ) -> None:
         super().__init__()
 
         self.blocks = nn.Sequential(
-            ConvBlock(in_channels, hid_dim),
-            ConvBlock(hid_dim, hid_dim),
+            ConvBlock(in_channels, hid_dim, p_drop),
+            ConvBlock(hid_dim, hid_dim, p_drop),
         )
 
         self.head = nn.Sequential(
@@ -35,6 +37,12 @@ class BasicConvClassifier(nn.Module):
         X = self.blocks(X)
 
         return self.head(X)
+    
+    def l2_regularization(self):
+        l2_reg = torch.tensor(0.0)
+        for param in self.parameters():
+            l2_reg += torch.norm(param)
+        return self.weight_decay * l2_reg
 
 
 class ConvBlock(nn.Module):

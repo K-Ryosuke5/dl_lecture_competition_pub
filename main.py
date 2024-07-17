@@ -68,6 +68,11 @@ def run(args: DictConfig):
             y_pred = model(X)
             
             loss = F.cross_entropy(y_pred, y)
+
+            # L2正則化を損失関数に追加
+            l2_reg = model.l2_regularization()
+            loss += l2_reg
+            
             train_loss.append(loss.item())
             
             optimizer.zero_grad()
