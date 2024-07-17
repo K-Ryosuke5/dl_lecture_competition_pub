@@ -11,14 +11,13 @@ class BasicConvClassifier(nn.Module):
         seq_len: int,
         in_channels: int,
         hid_dim: int = 128,
-        p_drop: float = 0.1,  # ドロップアウト率を追加
         weight_decay: float = 0.001
     ) -> None:
         super().__init__()
 
         self.blocks = nn.Sequential(
-            ConvBlock(in_channels, hid_dim, p_drop),
-            ConvBlock(hid_dim, hid_dim, p_drop),
+            ConvBlock(in_channels, hid_dim),
+            ConvBlock(hid_dim, hid_dim),
         )
 
         self.head = nn.Sequential(
@@ -82,3 +81,41 @@ class ConvBlock(nn.Module):
         # X = F.glu(X, dim=-2)
 
         return self.dropout(X)
+
+
+class EEGNet(nn.Module):
+    def __init__(self, F1=16, F2=32, D=2, dropout_rate=0.25):
+        super(EEGNet, self).__init__()
+        
+        self.first_conv = nn.Sequential(
+            nn.Conv2d(1, F1, kernel_size=(1, 64), stride=(1, 1), padding=(0, 32), bias=False),
+            nn.BatchNorm2d(F1, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        )
+        
+        self.depthwise_conv = nn.Sequential(
+            nn.Conv2d(F1, F1*D, kernel_size=(2, 1), stride=(1, 1), groups=F1, bias=False),
+            nn.BatchNorm2d(F1*D, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ELU(alpha=1.0),
+            nn.AvgPool2d(kernel_size=(1, 4), stride=(1, 4), padding=0),
+            nn.Dropout(p=dropout_rate),
+        )
+        
+        self.separable_conv = nn.Sequential(
+            nn.Conv2d(F1*D, F2, kernel_size=(1, 16), stride=(1, 1), padding=(0, 8), bias=False),
+            nn.BatchNorm2d(F2, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            nn.ELU(alpha=1.0),
+            nn.AvgPool2d(kernel_size=(1, 8), stride=(1, 8), padding=0),
+            nn.Dropout(p=dropout_rate),
+        )
+        
+        self.classify = nn.Sequential(
+            nn.Linear(F2*19, 4),  # Assuming 4 output classes
+            nn.Softmax(dim=1),
+        )
+    def forward(self, x):
+        x = self.first_conv(x)
+        x = self.depthwise_conv(x)
+        x = self.separable_conv(x)
+        x = x.view(x.size(0), -1)
+        x = self.classify(x)
+        return x
