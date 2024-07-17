@@ -46,8 +46,7 @@ def run(args: DictConfig):
     # ------------------
     #     Optimizer
     # ------------------
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)  # weight_decayを追加
     # ------------------
     #   Start training
     # ------------------  
@@ -69,9 +68,6 @@ def run(args: DictConfig):
             
             loss = F.cross_entropy(y_pred, y)
 
-            # L2正則化を損失関数に追加
-            l2_reg = model.l2_regularization()
-            loss += l2_reg
             
             train_loss.append(loss.item())
             

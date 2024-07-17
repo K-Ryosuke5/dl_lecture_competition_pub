@@ -38,11 +38,10 @@ class BasicConvClassifier(nn.Module):
         return self.head(X)
     
     def l2_regularization(self):
-        l2_reg = torch.tensor(0.0)
+        l2_reg = torch.tensor(0., device=next(self.parameters()).device)  # 初期化
         for param in self.parameters():
             l2_reg += torch.norm(param)
-        return self.weight_decay * l2_reg
-
+        return l2_reg
 
 class ConvBlock(nn.Module):
     def __init__(
@@ -109,10 +108,13 @@ class EEGNet(nn.Module):
         )
         
         self.classify = nn.Sequential(
-            nn.Linear(F2*19, 4),  # Assuming 4 output classes
+            nn.Linear(F2*(((271 - 1) // 4 + 1 - 1) // 8 + 1), 4),  # Assuming 4 output classes
             nn.Softmax(dim=1),
         )
+
     def forward(self, x):
+        if x.dim() == 3:  # チャンネル次元がない場合は追加
+            x = x.unsqueeze(1)
         x = self.first_conv(x)
         x = self.depthwise_conv(x)
         x = self.separable_conv(x)

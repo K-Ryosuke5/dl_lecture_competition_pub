@@ -28,22 +28,28 @@ class ThingsMEGDataset(torch.utils.data.Dataset):
         if split in ["train", "val"]:
             self.y = torch.load(os.path.join(data_dir, f"{split}_y.pt"))
             assert len(torch.unique(self.y)) == self.num_classes, "Number of classes do not match."
+        
 
-            # データのリサンプリング
+        
+        # データのリサンプリング
         self.X = self.resample_data(self.X, resample_rate)
         
         # データのフィルタリング
-        self.X = self.filter_data(self.X)
+        #self.X = self.filter_data(self.X)
+
+
 
     def resample_data(self, data, resample_rate):
         # データのリサンプリング処理を実装
         # 例えば、scipyのresample関数を使用してデータをリサンプリングする
-        return scipy.signal.resample(data, resample_rate, axis=2)
+        resampled_data = scipy.signal.resample(data, resample_rate, axis=2)
+        return resampled_data.copy()  # 負のストライドを避けるためにコピーを作成
 
     def filter_data(self, data):
         # データのフィルタリング処理を実装
         # 例えば、scipyのフィルタリング関数を使用してデータをフィルタリングする
-        return scipy.signal.sosfiltfilt(filter_coefficients, data, axis=2)
+        filtered_data = scipy.signal.sosfiltfilt(filter_coefficients, data, axis=2)
+        return filtered_data.copy()  # 負のストライドを避けるためにコピーを作成
 
     def __len__(self) -> int:
         return len(self.X)
